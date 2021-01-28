@@ -1,0 +1,39 @@
+FROM php:7.3-fpm
+
+# Install packages
+RUN apk --no-cache add php7.3 php7.3-fpm php7.3-mysqli php7.3-json php7.3-openssl php7.3-curl \
+    php7.3-zlib php7.3-xml php7.3-phar php7.3-intl php7.3-dom php7.3-xmlreader php7.3-ctype php7.3-session \
+    php7.3-mbstring php7.3-gd nginx supervisor curl
+
+# Configure nginx
+COPY config/nginx.conf /etc/nginx/nginx.conf
+# Remove default server definition
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Configure PHP-FPM
+COPY config/fpm-pool.conf /etc/php7.3/php-fpm.d/www.conf
+COPY config/php.ini /etc/php7.3/conf.d/custom.ini
+
+
+RUN apt-get install -y autoconf pkg-config libssl-dev
+RUN pecl install mongodb
+RUN docker-php-ext-install bcmath
+RUN echo "extension=mongodb.so" >> /usr/local/etc/php/conf.d/mongodb.ini
+
+#redis
+RUN pecl install -o -f redis \
+&&  rm -rf /tmp/pear \
+&&  docker-php-ext-enable redis
+
+# Install lumen dependencies
+RUN apt-get install -y \
+        libfreetype6-dev \
+        libjpeg62-turbo-dev \
+        libmcrypt-dev \
+        libpng12-dev
+
+RUN docker-php-ext-install iconv mcrypt mbstring \
+    && docker-php-ext-install zip \
+    && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
+    && docker-php-ext-install gd
+
